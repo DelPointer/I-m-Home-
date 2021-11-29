@@ -1,32 +1,37 @@
+ï»¿// ìµœì¢… ìˆ˜ì • 2021 - 11 - 29 (ì›”) 09:27
 #include <stdio.h>
 #include <Windows.h>	// gotoxy
-#include <stdlib.h>		// srand
+#include <stdlib.h>		// srand, abs
 #include <time.h>		// time
 #include <conio.h>		// _getch
 #include <string.h>		// memset
+#include <stdbool.h>	// true false
 
-// ¿ö´× ¹«½Ã
+
+
+
+// ì›Œë‹ ë¬´ì‹œ (ë²„í¼ ì˜¤ë²„ëŸ° ë•Œë¬¸ì— ì‹¤í–‰ì´ ì•ˆë¨.)
 #pragma warning(disable:6835)
 #pragma warning(disable:6836)
 
 
-// ÄÜ¼Ö Å©±â Á¤ÀÇ
+// ì½˜ì†” í¬ê¸° ì •ì˜
 #define SCREEN_WIDTH  60
 #define SCREEN_HEIGHT 30
 
-// ¸Ê »çÀÌÁî
+// ë§µ ì‚¬ì´ì¦ˆ
 #define SIZE 10
 
 /*
-EMPTY	= ±æ						= 0
-WALL	= º®						= 1
-D		= ¼ú ÃëÇÑ »ç¶÷ (Drunk)	= 68
-H		= Áı	 (Home)				= 72
-O		= °æÂû (Police Officer)	= 79
-P		= ¼úÁı (Pub)				= 68
+EMPTY	= ê¸¸						= 0
+WALL	= ë²½						= 1
+D		= ìˆ  ì·¨í•œ ì‚¬ëŒ (Drunk)	= 68
+H		= ì§‘	 (Home)				= 72
+O		= ê²½ì°° (Police Officer)	= 79
+P		= ìˆ ì§‘ (Pub)				= 68
 */
 
-// ¼ıÀÚ´Â °¢ ¾ËÆÄºªÀÇ ¾Æ½ºÅ°ÄÚµå & ±æ º® ±¸ºĞ
+// ìˆ«ìëŠ” ê° ì•ŒíŒŒë²³ì˜ ì•„ìŠ¤í‚¤ì½”ë“œ & ê¸¸ ë²½ êµ¬ë¶„
 #define WALL 1
 #define EMPTY 0
 #define P 80
@@ -34,78 +39,71 @@ P		= ¼úÁı (Pub)				= 68
 #define H 72
 #define D 68
 
-// ¹æÇâÅ°
+// ë°©í–¥í‚¤
 #define UP 72
 #define DOWN 80
 #define LEFT 75
 #define RIGHT 77
 
 
-// ¿­°ÅÇü
-typedef enum Directions {
-	Up = 0,
-	Down,
-	Left,
-	Right
-}Directions;
-typedef enum ObjectType {
-	Player = 0,
-	Police
-} OT;
-typedef enum MovementMode {
-	Auto = 0,
-	Manual = 1
-}MV;
 
 
 
-// ÇöÀç DÀÇ À§Ä¡
+// í˜„ì¬ Dì˜ ìœ„ì¹˜
 int playerX;
 int playerY;
 
+// ì´ë™í•˜ê¸° ì „ Dì˜ ìœ„ì¹˜
 int prePlayerX;
 int prePlayerY;
 
-int curQuad;	// ÇöÀç À§Ä¡ÇÑ »çºĞ¸é
-int prevQuad;	// ÀÌÀü¿¡ ¹æ¹®ÇÑ »çºĞ¸é
+int curQuad;	// í˜„ì¬ ìœ„ì¹˜í•œ ì‚¬ë¶„ë©´
+int prevQuad;	// ì´ì „ì— ë°©ë¬¸í•œ ì‚¬ë¶„ë©´
+int tempQuad;	// ì‚¬ë¶„ë©´ ì„ì‹œ ì €ì¥ ë³€ìˆ˜
 
-// °æÂûµéÀÇ À§Ä¡
-// cops = { {°æÂû1 xPos, °æÂû1 yPos, ½ºÆù µÈ »çºĞ¸é}, {°æÂû2 xPos, °æÂû2 yPos, ½ºÆù µÈ »çºĞ¸é} };
+// ê²½ì°°ë“¤ì˜ ìœ„ì¹˜
+// cops = { {ê²½ì°°1 xPos, ê²½ì°°1 yPos, ìŠ¤í° ëœ ì‚¬ë¶„ë©´}, {ê²½ì°°2 xPos, ê²½ì°°2 yPos, ìŠ¤í° ëœ ì‚¬ë¶„ë©´} };
 int cops[2][3] = { 0 };
-int policeNum;			// °æÂûÀÇ ¼ö
+int policeNum = 0;			// ê²½ì°°ì˜ ìˆ˜
 
-// ¼úÁıÀÌ À§Ä¡ÇÑ »çºĞ¸é
+// ìˆ ì§‘ì´ ìœ„ì¹˜í•œ ì‚¬ë¶„ë©´
 int pubQuad;
+int homeQuad;
 
-// ¼úÁıÀÇ À§Ä¡
+// ìˆ ì§‘ì˜ ìœ„ì¹˜
 int PUB_X;
 int PUB_Y;
 
-// ÁıÀÇ À§Ä¡
+// ì§‘ì˜ ìœ„ì¹˜
 int HOME_X;
 int HOME_Y;
 
-/* °ÔÀÓ ÀÌµ¿ °ü·Ã */
-int m_t, current_m_t;	// ÀÚµ¿ ÀÌµ¿ È½¼ö
-int r_t, current_r_t;	// ¼öµ¿ ÀÌµ¿ È½¼ö
-int moveInterval;		// ÀÌµ¿ ÁÖ±â
+/* ê²Œì„ ì´ë™ ê´€ë ¨ */
+int m_t, current_m_t;	// ìë™ ì´ë™ íšŸìˆ˜
+int r_t, current_r_t;	// ìˆ˜ë™ ì´ë™ íšŸìˆ˜
+int moveInterval;		// ì´ë™ ì£¼ê¸°
 
+int detect;				// í”Œë ˆì´ì–´ ë°œê°
+int detectorQuad;		// í”Œë ˆì´ì–´ë¥¼ ë°œê²¬í•œ ê²½ì°°ì˜ quadrant
+int isAuto;			// ì´ë™ ëª¨ë“œ ( ìë™ì€ true, ìˆ˜ë™ì€ false)
+bool pauseSpawning;	// ê²½ì°° ìŠ¤í° ì¼ì‹œì •ì§€
+int lastQuad;		// ë§ˆì§€ë§‰ ë‚¨ì€ ì‚¬ë¶„ë©´ (ê²½ì°°ì´ ì•ˆë‚˜ì˜¨)
 
-// ¸Ê
+// ë§µ
 int map[SIZE][SIZE] = {
-	// 1»çºĞ¸é
+	// 1ì‚¬ë¶„ë©´
 	
 	/*
 	* 
-	*	   1¦£¦¡¦¨¦¡¦¤2
-	*		¦§¦¡¦«¦¡¦©
-	*	   3¦¦¦¡¦ª¦¡¦¥4
+	*	   1â”Œâ”€â”¬â”€â”2
+	*		â”œâ”€â”¼â”€â”¤
+	*	   3â””â”€â”´â”€â”˜4
 	* 
-	* °¢ ¼ıÀÚ´Â »çºĞ¸é ¹øÈ£·Î Á¤ÇØ±â·Î ÇÔ
-	* 1Àº º®, 0Àº ±æ
+	* ê° ìˆ«ìëŠ” ì‚¬ë¶„ë©´ ë²ˆí˜¸ë¡œ ì •í•´ê¸°ë¡œ í•¨
+	* 1ì€ ë²½, 0ì€ ê¸¸
 	*/
 
-	{1,1,0,1,1,79,0,0,0,0},
+	{1,1,0,1,1,0,0,0,0,0},
 	{0,0,0,0,0,0,1,0,1,1},
 	{0,1,1,1,1,0,1,0,0,0},
 	{0,0,0,0,0,0,1,0,1,0},
@@ -121,22 +119,22 @@ int front_buffer[SIZE][SIZE];
 
 
 /*
-* Ä¿¼­ ±ôºıÀÓ Á¦°Å
+* ì»¤ì„œ ê¹œë¹¡ì„ ì œê±° (ì»¤ì„œ ë¹„ê°€ì‹œí™”)
 * parameter : void
 * return : void
 */
 void CursorInvisible()
 {
-	CONSOLE_CURSOR_INFO cursorInfo = { 0, };//ÄÜ¼Ö Ä¿¼­ Á¤º¸ ±¸Á¶Ã¼ ÃÊ±âÈ­
-	cursorInfo.dwSize = 1;					//Ä¿¼­ ±½±â (1 ~ 100)
-	cursorInfo.bVisible = FALSE;			//Ä¿¼­ Visible TRUE(º¸ÀÓ) FALSE(¼û±è)
-	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursorInfo); // ÄÜ¼Ö Ä¿¼­ Á¤º¸¸¦ ¸¸µé¾îµĞ ±¸Á¶Ã¼ÀÇ Á¤º¸¿¡ ¸Â°Ô ¼³Á¤
+	CONSOLE_CURSOR_INFO cursorInfo = { 0, };//ì½˜ì†” ì»¤ì„œ ì •ë³´ êµ¬ì¡°ì²´ ì´ˆê¸°í™”
+	cursorInfo.dwSize = 1;					//ì»¤ì„œ êµµê¸° (1 ~ 100)
+	cursorInfo.bVisible = FALSE;			//ì»¤ì„œ Visible TRUE(ë³´ì„) FALSE(ìˆ¨ê¹€)
+	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursorInfo); // ì½˜ì†” ì»¤ì„œ ì •ë³´ë¥¼ ë§Œë“¤ì–´ë‘” êµ¬ì¡°ì²´ì˜ ì •ë³´ì— ë§ê²Œ ì„¤ì •
 }
 
 /*
-* ÇÔ¼ö¸í : gotoxy
-* »ç¿ë ¿ëµµ: ÀÎÀÚ·Î ¹ŞÀº x, y°ªÀ» ÁÂÇ¥·Î »ç¿ëÇÏ¿© ÁÂÇ¥(x, y)·Î Ä¿¼­¸¦ ÀÌµ¿½ÃÅ²´Ù.
-* ¸Å°³º¯¼ö: int x int y
+* í•¨ìˆ˜ëª… : gotoxy
+* ì‚¬ìš© ìš©ë„: ì¸ìë¡œ ë°›ì€ x, yê°’ì„ ì¢Œí‘œë¡œ ì‚¬ìš©í•˜ì—¬ ì¢Œí‘œ(x, y)ë¡œ ì»¤ì„œë¥¼ ì´ë™ì‹œí‚¨ë‹¤.
+* ë§¤ê°œë³€ìˆ˜: int x int y
 */
 void gotoxy(int x, int y) {
 	COORD pos = { x * 2, y };
@@ -144,54 +142,62 @@ void gotoxy(int x, int y) {
 }
 
 /*
-* È­¸é Áö¿ì±â
-* parameter : void
-* return : void
+* ì—”í„° ëˆ„ë¥´ê¸° ì „ê¹Œì§€ ê³„ì† ì¼ì‹œì •ì§€
 */
-void cls(void) {
-	system("CLS");
+void pause() {
+	// ì—”í„° ëˆ„ë¥´ê¸° ì „ê¹Œì§€ ê³„ì† ì •ì§€
+
+	int k;
+	do {
+
+		k = _getch();
+	} while (k != 13);
 }
 
+/* ê²Œì„ ì‹œì‘ ì „ ì„¤ì • í•¨ìˆ˜ */
 
-
-/* °ÔÀÓ ½ÃÀÛ Àü ¼³Á¤ ÇÔ¼ö */
 /* 
-* m_t, r_t, moveInterval ÃÊ±â°ª ¿ÜºÎÀÔ·Â
+* m_t, r_t, moveInterval ì´ˆê¸°ê°’ ì™¸ë¶€ì…ë ¥
 * parameter : void
 * return : void
 */
 void setOption(void) {
-	printf("m_t:\t\t"); scanf_s("%d", &m_t, 4);
-	printf("r_t:\t\t"); scanf_s("%d", &r_t, 4);
-	printf("moveInterval:\t"); scanf_s("%d", &moveInterval, 4);
+	printf("m_t:\t\t"); scanf_s("%d", &m_t);
+	printf("r_t:\t\t"); scanf_s("%d", &r_t);
+	printf("moveInterval:\t"); scanf_s("%d", &moveInterval);
 	current_m_t = m_t;
 	current_r_t = r_t;
+	isAuto = true;
+	pauseSpawning = false;
+	lastQuad = NULL;
 }
 
 /*
-* ¼úÁı, Áı ½ºÆù À§Ä¡ ¼³Á¤
+* ìˆ ì§‘, ì§‘ ìŠ¤í° ìœ„ì¹˜ ì„¤ì •
 * parameter : void
 * return : void
 */ 
 void setSpawnPos(void) {
 	
-	// ¼úÁıÀÌ¶û Áı »çºĞ¸é ÁöÁ¤
+	// ìˆ ì§‘ì´ë‘ ì§‘ ì‚¬ë¶„ë©´ ì§€ì •
 	pubQuad = rand() % 4 + 1;
 	
 
 
-	// ¼úÁı°ú ÁıÀÌ ¸ğµÎ ½ºÆùÀÌ µÆ´ÂÁö È®ÀÎÇÏ´Â º¯¼ö(Boolean)
+	// ìˆ ì§‘ê³¼ ì§‘ì´ ëª¨ë‘ ìŠ¤í°ì´ ëëŠ”ì§€ í™•ì¸í•˜ëŠ” ë³€ìˆ˜(Boolean)
 	int isSpawned = 0;
 	
-	pubQuad % 2;
+	// |5 - pubQuad|í•˜ë©´ ì§‘ ë¶„ë©´ì´ ë‚˜ì˜´
+	// ì˜ˆ: 5-2 = 3, 5 - 1 = 4
+	homeQuad = abs(pubQuad - 5);
 
 	
 	while (!isSpawned) {
-		// ¼úÁı À§Ä¡
+		// ìˆ ì§‘ ìœ„ì¹˜
 		int rangeX	= NULL;
 		int rangeY	= NULL;
 
-		// Áı À§Ä¡
+		// ì§‘ ìœ„ì¹˜
 		int _rangeX = NULL;
 		int _rangeY = NULL;
 
@@ -200,11 +206,11 @@ void setSpawnPos(void) {
 			// [0~4][0~4] = P
 			// [5~9][5~9] = H
 
-			// P ½ºÆù À§Ä¡
+			// P ìŠ¤í° ìœ„ì¹˜
 			rangeX = rand() % 5;
 			rangeY = rand() % 5;
 
-			// H ½ºÆù À§Ä¡
+			// H ìŠ¤í° ìœ„ì¹˜
 			_rangeX = rand() % (9 - 5 + 1) + 5;
 			_rangeY = rand() % (9 - 5 + 1) + 5;
 			
@@ -244,8 +250,8 @@ void setSpawnPos(void) {
 		}
 
 		if (map[rangeY][rangeX] == 0 && map[_rangeY][_rangeX] == 0) {
-			map[rangeY][rangeX]	= P;	// ¼úÁı À§Ä¡ °áÁ¤
-			map[_rangeY][_rangeX]	= H;	// Áı À§Ä¡ °áÁ¤
+			map[rangeY][rangeX]	= P;	// ìˆ ì§‘ ìœ„ì¹˜ ê²°ì •
+			map[_rangeY][_rangeX]	= H;	// ì§‘ ìœ„ì¹˜ ê²°ì •
 
 			PUB_X = rangeX;
 			PUB_Y = rangeY;
@@ -259,22 +265,24 @@ void setSpawnPos(void) {
 }
 
 /*
-* ¼úÁı¿¡¼­ ¼ú ÃëÇÑ »ç¶÷ÀÌ ³ª¿À´Â ¹æÇâ
+* ìˆ ì§‘ì—ì„œ ìˆ  ì·¨í•œ ì‚¬ëŒì´ ë‚˜ì˜¤ëŠ” ë°©í–¥
 * parameter : void
 * return : void
 */ 
 void setSpawnDrunk(void) {
 	
-	// ¼úÁı¿¡¼­ ³ª¿À´Â ¹æÇâ
-	int direction;
+	// ìˆ ì§‘ì—ì„œ ë‚˜ì˜¤ëŠ” ë°©í–¥
+	int dir[4] = { UP, DOWN, LEFT, RIGHT };
+	int random;
 	int isSpawned = 0;
+
 	while (!isSpawned) {	
 
-		// 0: À§, 1: ¾Æ·¡, 2: ¿ŞÂÊ, 3: ¿À¸¥ÂÊ
-		direction = rand() % 4;
+		// 0: ìœ„, 1: ì•„ë˜, 2: ì™¼ìª½, 3: ì˜¤ë¥¸ìª½
+		random = rand() % 4;
 
 
-		if (direction == 0 && PUB_Y > 0) {
+		if (dir[random] == UP && PUB_Y > 0 && PUB_Y != 5) {
 			if (map[PUB_Y - 1][PUB_X] == 0) {
 				playerX = PUB_X; 
 				playerY = PUB_Y - 1;
@@ -283,7 +291,7 @@ void setSpawnDrunk(void) {
 			}
 		}
 
-		else if (direction == 1 && PUB_Y < 9) {
+		else if (dir[random] == DOWN && PUB_Y < 9 && PUB_Y != 4) {
 			if (map[PUB_Y + 1][PUB_X] == 0) {
 				playerX = PUB_X;
 				playerY = PUB_Y + 1;
@@ -292,7 +300,7 @@ void setSpawnDrunk(void) {
 			}
 		}
 
-		else if (direction == 2 && PUB_X > 0) {
+		else if (dir[random] == LEFT && PUB_X > 0 && PUB_X != 5) {
 			if (map[PUB_Y][PUB_X - 1] == 0) {
 				playerX = PUB_X - 1;
 				playerY = PUB_Y;
@@ -301,7 +309,7 @@ void setSpawnDrunk(void) {
 			}
 		}
 
-		else if (direction == 3 && PUB_X < 9) {
+		else if (dir[random] == RIGHT && PUB_X < 9 && PUB_X != 4) {
 			if (map[PUB_Y][PUB_X + 1] == 0) {
 				playerX = PUB_X + 1;
 				playerY = PUB_Y;
@@ -313,232 +321,148 @@ void setSpawnDrunk(void) {
 }
 
 /*
-* front_buffer¸¦ -1·Î ÃÊ±âÈ­
+* front_bufferë¥¼ -1ë¡œ ì´ˆê¸°í™”
 * parameter : void
 * return : void
 */
 void memsetBuffer() {
 	for (int i = 0; i < SIZE; i++)
+		// memset(1ì°¨ì› ë°°ì—´, ì´ˆê¸°í™” í•  ê°’, ë°°ì—´ì˜ í¬ê¸°);
 		memset(front_buffer[i], -1, sizeof(int) * SIZE);
 }
 
 
 
-/* µå·ÎÀ× °ü·Ã ÇÔ¼ö*/
+/* ë“œë¡œì‰ ê´€ë ¨ í•¨ìˆ˜*/
 
 /*
-* ÇÑ±ÛÀÚ Ãâ·Â
-* parameter : xÁÂÇ¥, yÁÂÇ¥, ¹Ù²Ü ¹®ÀÚ
+* í•œê¸€ì ì¶œë ¥
+* parameter : xì¢Œí‘œ, yì¢Œí‘œ, ë°”ê¿€ ë¬¸ì
 * return : void
 */
 void drawMap(int x, int y, int c) {
-	// Ãâ·ÂÇÒ À§Ä¡·Î 
+	// ì¶œë ¥í•  ìœ„ì¹˜ë¡œ 
 	gotoxy(x, y);
 
 	// SetConsoleTextAttribute 
-	// Ãâ·ÂÀÇ »ö»óÀÌ ¼³Á¤ÇÑ °ª¿¡ µû¶ó¼­ ¹Ù²ï´Ù.
+	// ì¶œë ¥ì˜ ìƒ‰ìƒì´ ì„¤ì •í•œ ê°’ì— ë”°ë¼ì„œ ë°”ë€ë‹¤.
 	
 	if (c == WALL) {
-		// ¹àÀº Èò»ö
+		// ë°ì€ í°ìƒ‰
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
-		printf("¡á");
+		printf("â– ");
 	}
 	if (c == EMPTY) {
-		// ¿¶Àº È¸»ö
+		// ì˜…ì€ íšŒìƒ‰
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 8);
-		printf("¡à");
+		printf("â–¡");
 	}
 	if (c == P) {
-		// ÇÎÅ©»ö (º¸¶ó»öÀÎ°¡?)
+		// í•‘í¬ìƒ‰ (ë³´ë¼ìƒ‰ì¸ê°€?)
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 13);
-		printf("P ");
+		printf("ï¼°");
 	}
 	if (c == H) {
-		// ÃÊ·Ï»ö
+		// ì´ˆë¡ìƒ‰
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 10);
-		printf("H ");
+		printf("ï¼¨");
 	}
 	if (c == O) {
-		// »¡°£»ö
+		// ë¹¨ê°„ìƒ‰
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 12);
-		printf("O ");
+		printf("ï¼¯");
 	}
 	if (c == D) {
-		// ³ë¶õ»ö
+		// ë…¸ë€ìƒ‰
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
-		printf("D ");
+		printf("ï¼¤");
 	}
 
-	// Ãâ·ÂÇßÀ¸¸é ÀÌ»óÇÑ°÷¿¡ Ä¿¼­°¡ ÀÖÁö ¾Ê°Ô ¸Ê ³¡À¸·Î Ä¿¼­¸¦ ÀÌµ¿
+	// ì¶œë ¥í–ˆìœ¼ë©´ ì´ìƒí•œê³³ì— ì»¤ì„œê°€ ìˆì§€ ì•Šê²Œ ë§µ ëìœ¼ë¡œ ì»¤ì„œë¥¼ ì´ë™
 	gotoxy(SIZE, SIZE);
 
 }
 
 /*
-* ¹öÆÛ¸¦ ÇÁ¸°Æ®
-* parameter : ¸Ê(2Â÷¿ø ¹è¿­ ¸Å°³º¯¼ö)
+* ë²„í¼ë¥¼ í”„ë¦°íŠ¸
+* parameter : ë§µ(2ì°¨ì› ë°°ì—´ ë§¤ê°œë³€ìˆ˜)
 * return : void
 * function : 
-*	¹Ù²ïºÎºĞ Ãâ·Â
+*	ë°”ë€ë¶€ë¶„ ì¶œë ¥
 */
 void buffer_print(int map[][10])
 {
 	
-	/* ÇöÀç ¹Ì·Î¿Í front_buffer(ÀÌÀü ¹Ì·Î)¿¡ ÀÖ´Â ¹Ì·Î ºñ±³ */
+	/* í˜„ì¬ ë¯¸ë¡œì™€ front_buffer(ì´ì „ ë¯¸ë¡œ)ì— ìˆëŠ” ë¯¸ë¡œ ë¹„êµ */
 	for (int i = 0; i < SIZE; ++i)
 		for (int j = 0, j2 = 0; j < SIZE; ++j)
 		{
 			if (front_buffer[i][j] != map[i][j])
 			{
 				drawMap(j2, i, map[i][j]);
-				// ¹Ù²ï ºÎºĞ È­¸é¿¡ Ãâ·Â
+				// ë°”ë€ ë¶€ë¶„ í™”ë©´ì— ì¶œë ¥
 				front_buffer[i][j] = map[i][j];
-				// ¹Ù²ï ºÎºĞÀº Ãâ·Â ÈÄ front_buffer¿¡ ÀúÀå
+				// ë°”ë€ ë¶€ë¶„ì€ ì¶œë ¥ í›„ front_bufferì— ì €ì¥
 			}
 			++j2;
-			// Ãâ·ÂÇÒ À§Ä¡¸¦ °è¼Ó º¯°æÇÏ±â ¶§¹®¿¡ Áõ°¨¿¬»êÀÚ¸¦ ÀÌ¿ëÇÑ´Ù.
+			// ì¶œë ¥í•  ìœ„ì¹˜ë¥¼ ê³„ì† ë³€ê²½í•˜ê¸° ë•Œë¬¸ì— ì¦ê°ì—°ì‚°ìë¥¼ ì´ìš©í•œë‹¤.
 		}
-}
-
-
-
-/* ÀÌµ¿ °ü·Ã ÇÔ¼ö*/
-
-/*
-* ÇÃ·¹ÀÌ¾î ¼öµ¿ ÀÌµ¿
-* parameter : void
-* return : void
-*/
-void manualMovement(void)
- {
-	// ¹æÇâÅ° ÀÔ·Æ
-	int dir = _getch();
-
-	// °¡·Á°í ÇÏ´Â ¹æÇâÀÌ ¸Ê ¹ÛÀÌ ¾Æ´Ï°Å³ª º®ÀÌ ¾Æ´Ò °æ¿ì¿¡¸¸ °¡´É
-	if (dir == UP	&& playerY > 0 && map[playerY - 1][playerX] != 1) {
-		map[playerY--][playerX] = 0;
-		map[playerY][playerX]	= D;
-	}
-	if (dir == DOWN && playerY < 9 && map[playerY + 1][playerX] != 1) {
-		map[playerY++][playerX] = 0;
-		map[playerY][playerX]	= D;
-	}
-	if (dir == LEFT && playerX > 0 && map[playerY][playerX - 1] != 1) {
-		map[playerY][playerX--] = 0;
-		map[playerY][playerX] = D;
-	}
-
-	if (dir == RIGHT && playerX < 9 && map[playerY][playerX + 1] != 1) {
-		map[playerY][playerX++] = 0;
-		map[playerY][playerX] = D;
-	}
-
-	// ÇÃ·¹ÀÌ¾î°¡ ÆàÀÌ³ª ÁıÀ» Áö³ª °¬À» ¶§ »ç¶óÁö´Â °ÍÀ» ¹æÁö ÇÔ.
-	if (map[PUB_Y][PUB_X] == 0) map[PUB_Y][PUB_X] = P;
-	if (map[HOME_Y][HOME_X] == 0) map[HOME_Y][HOME_X] = H;
 
 }
 
 /*
-* ÇÃ·¹ÀÌ¾î ÀÚµ¿ ÀÌµ¿
+* r_t íšŸìˆ˜ ë„˜ì–´ê°€ë©´ ê²Œì„ ì¢…ë£Œ
 * parameter : void
 * return : void
 */
-void autoMovement() {
-
-	prePlayerX = playerX;
-	prePlayerY = playerY;
-
-	// ÀÌµ¿ ¹æÇâ °áÁ¤
-	int dirs[4] = { UP, DOWN, LEFT, RIGHT };
-	int random = NULL;
-	int temp = 1;
-
-	// ÇÃ·¹ÀÌ¾î ÀÌµ¿
-	while (temp) {
-		// ¹æÇâ ÁöÁ¤
-		random = rand() % 4;
-
-		// °¡·Á°í ÇÏ´Â ¹æÇâÀÌ ¸Ê ¹ÛÀÌ ¾Æ´Ï°Å³ª º®ÀÌ ¾Æ´Ò °æ¿ì¿¡¸¸ °¡´É
-		if (dirs[random] == UP && playerY > 0 && map[playerY - 1][playerX] != 1) {
-			//ÀÌÀü »çºĞ¸é ¹æ¹® ±İÁö
-			if (prevQuad == 1 || prevQuad == 2) {
-				if (playerY == 5) continue;
-			}
-			
-			map[playerY--][playerX] = 0;
-			temp = !temp;
-		}
-		else if (dirs[random] == DOWN && playerY < 9 && map[playerY + 1][playerX] != 1) {
-			if (prevQuad == 3 || prevQuad == 4) {
-				if (playerY == 4) continue;
-			}
-
-			map[playerY++][playerX] = 0;
-			temp = !temp;
-		}
-		else if (dirs[random] == LEFT && playerX > 0 && map[playerY][playerX - 1] != 1) {
-			if (prevQuad == 1 || prevQuad == 3)
-				if (playerX == 5) continue;
-
-			map[playerY][playerX--] = 0;
-			temp = !temp;
-		}
-		else if (dirs[random] == RIGHT && playerX < 9 && map[playerY][playerX + 1] != 1) {
-			if (prevQuad == 2 || prevQuad == 4)
-				if (playerX == 4) continue;
-
-			map[playerY][playerX++] = 0;
-			temp = !temp;
-		}
-
-		
-		if (!temp) {
-			// ÇöÀç À§Ä¡ °»½Å~
-			map[playerY][playerX] = D;
-			current_m_t--;
-
-			// ÇÃ·¹ÀÌ¾î°¡ ÆàÀÌ³ª ÁıÀ» Áö³ª °¬À» ¶§ »ç¶óÁö´Â °ÍÀ» ¹æÁö ÇÔ.
-			if (map[PUB_Y][PUB_X] == 0) map[PUB_Y][PUB_X] = P;
-			if (map[HOME_Y][HOME_X] == 0) map[HOME_Y][HOME_X] = H;
-		}
-	}
-
+void gameOver(void) {
 	
+	// ì§‘ ë„ì°©
+	if (playerX == HOME_X && playerY == HOME_Y) {
+		buffer_print(map);
+		gotoxy(0, 23);
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 13);
+		printf("ì§‘ ë„ì°©!");
+
+		// ì—”í„° ëˆ„ë¥´ê¸° ì „ê¹Œì§€ ê³„ì† ì •ì§€
+		pause();
+	}
+	// ë‹¤ë¥¸ ë¶„ë©´ìœ¼ë¡œ ë„˜ì–´ê°
+	if (tempQuad != curQuad) {
+		
+		// r_t ì”ì—¬ íšŸìˆ˜ê°€ ë‚¨ì•„ìˆì§€ ì•Šìœ¼ë©´ ê²Œì„ ì¢…ë£Œ
+		if (current_r_t < 0) {
+			gotoxy(0, 23);
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 13);
+			printf("Game Over");
+			pause();
+		}
+		else {
+			current_m_t = m_t;
+			current_r_t = r_t;
+			isAuto = true;
+			return;
+		}
+	}
+	// ë„˜ì–´ê°€ê¸°ë„ ì „ì— r_të¥¼ ëª¨ë‘ ì†Œì§„í•˜ë©´
+	if (current_r_t < 0) {
+		// ê²œ ì •ì§€
+		gotoxy(0, 23);
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 13);
+		printf("Game Over");
+		pause();
+	}
 }
 
+
+/* ì´ë™ ê´€ë ¨ í•¨ìˆ˜*/
 /*
-* ÇÃ·¹ÀÌ¾î ÀÌµ¿ ¸ğµå º¯È¯
-*/
-void playerControl(int isDetected) {
-	if (isDetected) manualMovement();
-	else autoMovement();
-}
-
-/*
-* °æÂûÀÇ ¼øÂû ÀÌµ¿
-* parameter : void
-* return : void
-*/
-void copPatrol(void) {
-
-}
-
-/*
-* °æÂûÀÌ ÇÃ·¹ÀÌ¾î¸¦ ¹ß°ß
-* parameter : void
-* return : int(¹ß°ßÇÏ¸é 1, ¾Æ´Ï¸é 0)
-*/
-int detectedPlayer(void){}
-
-
-/* 
-* ¹æ¹®ÇÑ ÀÌÀü ºĞ¸é°ú ÇöÀç ºĞ¸éÀ» ¼³Á¤
+* ë°©ë¬¸í•œ ì´ì „ ë¶„ë©´ê³¼ í˜„ì¬ ë¶„ë©´ì„ ì„¤ì •
 * parameter : void
 * return : void
 */
 void visitedQuad(void) {
-	
+
 	if (prePlayerX == 4 && playerX == 5) {
 		if (playerY < 5) {
 			prevQuad = 1;
@@ -579,41 +503,560 @@ void visitedQuad(void) {
 			curQuad = 2;
 		}
 	}
+
+}
+
+/*
+* í”Œë ˆì´ì–´ ìˆ˜ë™ ì´ë™
+* parameter : void
+* return : void
+*/
+void manualMovement(void)
+ {
+	// ì´ë™í•˜ê¸° ì „ í”Œë ˆì´ì–´ì˜ ìœ„ì¹˜ë¥¼ ì €ì¥
+	prePlayerX = playerX;
+	prePlayerY = playerY;
+	
+	pauseSpawning = false;
+
+	// ë²„í¼ ë¹„ìš°ê¸°
+	fflush(stdin);
+	// ë°©í–¥í‚¤ ì…ë ¥
+	int dir = _getch();
+
+	//printf("%d", dir);
+	// ê°€ë ¤ê³  í•˜ëŠ” ë°©í–¥ì— ë²½, ë§µ ë°–, ê²½ì°°ë§Œ ì•„ë‹ˆë©´ ì´ë™ ê°€ëŠ¥
+	if (dir == UP && playerY > 0 && map[playerY - 1][playerX] != 1 && map[playerY - 1][playerX] != 79) {
+		// r_tê°’ 1 ê°ì†Œ
+		current_r_t -= 1;
+
+		// ì´ì „ ìœ„ì¹˜ì— ê¸¸ ì„¤ì •
+		map[playerY--][playerX] = 0;
+
+		// í˜„ì¬ ìœ„ì¹˜ì— í”Œë ˆì´ì–´ ì„¤ì •
+		map[playerY][playerX] = D;
+
+	}
+	if (dir == DOWN && playerY < 9 && map[playerY + 1][playerX] != 1 && map[playerY + 1][playerX] != 79) {
+		--current_r_t;
+		map[playerY++][playerX] = 0;
+		map[playerY][playerX] = D;
+			
+	}
+	if (dir == LEFT && playerX > 0 && map[playerY][playerX - 1] != 1 && map[playerY][playerX - 1] != 79) {
+		--current_r_t;
+		map[playerY][playerX--] = 0;
+		map[playerY][playerX] = D;
+			
+	}
+
+	if (dir == RIGHT && playerX < 9 && map[playerY][playerX + 1] != 1 && map[playerY][playerX + 1] != 79) {
+		--current_r_t;
+		map[playerY][playerX++] = 0;
+		map[playerY][playerX] = D;
+	}
+
+	// í”Œë ˆì´ì–´ê°€ íì´ë‚˜ ì§‘ì„ ì§€ë‚˜ ê°”ì„ ë•Œ ì‚¬ë¼ì§€ëŠ” ê²ƒì„ ë°©ì§€ í•¨.
+	if (map[PUB_Y][PUB_X] == 0) map[PUB_Y][PUB_X] = P;
+	if (map[HOME_Y][HOME_X] == 0) map[HOME_Y][HOME_X] = H;
+	visitedQuad();
+	gameOver();
 	
 }
 
+/*
+* í”Œë ˆì´ì–´ ìë™ ì´ë™
+* parameter : void
+* return : void
+*/
+void autoMovement() {
 
+	// m_tê°€ ë”ì´ìƒ ì•ˆì¤„ê²Œ í•´ì¤„ bool ë³€ìˆ˜
+	static bool freeze_m_t = false;
+
+	// ì´ë™í•˜ê¸° ì „ í˜„ì¬ ìœ„ì¹˜ë¥¼ ì €ì¥
+	prePlayerX = playerX;
+	prePlayerY = playerY;
+
+	// ì´ë™ ë°©í–¥ ê²°ì •
+	int dirs[4] = { UP, DOWN, LEFT, RIGHT };
+	int random = NULL;
+	int temp = true;
+
+	// í”Œë ˆì´ì–´ ì´ë™
+	while (temp) {
+		// ë°©í–¥ ì§€ì •
+		random = rand() % 4;
+		
+		// ê°€ë ¤ê³  í•˜ëŠ” ë°©í–¥ì´ ë§µ ë°–ì´ ì•„ë‹ˆê±°ë‚˜ ë²½ì´ ì•„ë‹ ê²½ìš°ì—ë§Œ ê°€ëŠ¥
+		if (dirs[random] == UP && playerY > 0 && map[playerY - 1][playerX] != 1) {
+			//ì´ì „ ì‚¬ë¶„ë©´ ë°©ë¬¸ ê¸ˆì§€
+			if (prevQuad == 1 || prevQuad == 2) {
+				if (playerY == 5) continue;
+			}
+			
+			map[playerY--][playerX] = 0;
+			temp = !temp;
+		}
+		else if (dirs[random] == DOWN && playerY < 9 && map[playerY + 1][playerX] != 1) {
+			if (prevQuad == 3 || prevQuad == 4) {
+				if (playerY == 4) continue;
+			}
+
+			map[playerY++][playerX] = 0;
+			temp = !temp;
+		}
+		else if (dirs[random] == LEFT && playerX > 0 && map[playerY][playerX - 1] != 1) {
+			if (prevQuad == 1 || prevQuad == 3)
+				if (playerX == 5) continue;
+
+			map[playerY][playerX--] = 0;
+			temp = !temp;
+		}
+		else if (dirs[random] == RIGHT && playerX < 9 && map[playerY][playerX + 1] != 1) {
+			if (prevQuad == 2 || prevQuad == 4)
+				if (playerX == 4) continue;
+
+			map[playerY][playerX++] = 0;
+			temp = !temp;
+		}
+
+		// ê²½ì°°ì´ 0ëª…ì´ê³  m_të‚´ë¡œ ì²« ë¶„ë©´ì—ì„œ ì˜† ë¶„ë©´ìœ¼ë¡œ ë„˜ì–´ê°€ëŠ”ê²Œ ì„±ê³µí•˜ë©´ 
+		if (current_m_t >= 0 && curQuad != pubQuad && curQuad != homeQuad && freeze_m_t == false && policeNum == 0) {
+			// m_t ê³ ì •
+			freeze_m_t = true;
+		}
+		
+		// ì´ë™ì— ì„±ê³µí•˜ë©´
+		if (!temp) {
+			// í˜„ì¬ ìœ„ì¹˜ ê°±ì‹ ~
+			map[playerY][playerX] = D;
+			if(freeze_m_t == false) --current_m_t;
+
+			// í”Œë ˆì´ì–´ê°€ íì´ë‚˜ ì§‘ì„ ì§€ë‚˜ ê°”ì„ ë•Œ ì‚¬ë¼ì§€ëŠ” ê²ƒì„ ë°©ì§€ í•¨.
+			if (map[PUB_Y][PUB_X] == 0) map[PUB_Y][PUB_X] = P;
+			if (map[HOME_Y][HOME_X] == 0) map[HOME_Y][HOME_X] = H;
+			if (playerX == HOME_X && playerY == HOME_Y) {
+				buffer_print(map);
+				gotoxy(0, 23);
+				SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
+				printf("ì§‘ ë„ì°©!");
+				pause();
+			}
+		}
+	}
+	
+}
+
+/*
+* ê²½ì°°ì˜ ìˆœì°° ì´ë™
+* parameter : void
+* return : void
+*/
+void copPatrol(void) {
+	if (policeNum == 0) return;
+
+	int dir[4] = { UP, DOWN, LEFT, RIGHT };
+	int random;
+	int temp;
+	for (int i = 0; i < policeNum; i++) {
+		
+		// ê° ê²½ì°°ì´ ì´ë™ì„ ì™„ë£Œí–ˆì„ ë•Œ whileì„ ë„ê³  ë‹¤ìŒ ê²½ì°°ì„ ì´ë™ì‹œí‚¤ê¸° ìœ„í•œ ì„ì‹œ ë³€ìˆ˜
+		temp = true;
+
+
+		int COP_X = cops[i][0];		// ê²½ì°°ì˜ xì¢Œí‘œì˜ ì£¼ì†Œ
+		int COP_Y = cops[i][1];		// ê²½ì°°ì˜ yì¢Œí‘œì˜ ì£¼ì†Œ
+		int COP_Q = cops[i][2];		// ê²½ì°°ì˜ ì‚¬ë¶„ë©´. ì‚¬ë¶„ë©´ ìœ„ì¹˜ì •ë³´ëŠ” ìˆ˜ì •í•  í•„ìš”ê°€ ì—†ê¸° ë•Œë¬¸ì— ë³µì‚¬ ì´ˆê¸°í™”
+
+		// ì´ë™ ë²”ìœ„ ì œí•œ (íŠ¹ì • ì‚¬ë¶„ë©´ì—ì„œë§Œ ì›€ì§ì¼ ìˆ˜ ìˆê²Œ)
+		
+		while (temp) {
+			random = rand() % 4;
+			
+			// 1ì‚¬ë¶„ë©´ì´ê³ 
+			if (COP_Q == 1) {
+
+				// ë°©í–¥ì€ UP
+				if (dir[random] == UP ) {
+
+					// í•´ë‹¹ ë°©í–¥ì´ ë§µë°–ì´ ì•„ë‹ˆê³  ê¸¸ì¼ ê²½ìš°ì—ë§Œ
+					if (COP_Y > 0 && map[cops[i][1] - 1][cops[i][0]] == EMPTY) {
+
+						// ì´ë™ì„ ìˆ˜í–‰
+						map[cops[i][1]--][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == DOWN) {
+					if (COP_Y < 4 && map[cops[i][1] + 1][cops[i][0]] == EMPTY) {
+						map[cops[i][1]++][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == LEFT) {
+					if (COP_X > 0 && map[cops[i][1]][cops[i][0] - 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]--] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == RIGHT) {
+					if (COP_X < 4 && map[cops[i][1]][cops[i][0] + 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]++] = EMPTY;
+						temp = !temp;
+					}
+				}
+			}
+			else if (COP_Q == 2) {
+				if (dir[random] == UP) {
+					if (COP_Y > 0 && map[cops[i][1] - 1][cops[i][0]] == EMPTY) {
+						map[cops[i][1]--][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == DOWN) {
+					if (COP_Y < 4 && map[cops[i][1] + 1][cops[i][0]] == EMPTY) {
+						map[cops[i][1]++][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == LEFT) {
+					if (COP_X > 5 && map[cops[i][1]][cops[i][0] - 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]--] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == RIGHT) {
+					if (COP_X < 9 && map[cops[i][1]][cops[i][0] + 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]++] = EMPTY;
+						temp = !temp;
+					}
+				}
+			}
+			else if (COP_Q == 3) {
+				if (dir[random] == UP) {
+					if (COP_Y > 5 && map[cops[i][1] - 1][cops[i][0]] == EMPTY) {
+						map[cops[i][1]--][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == DOWN) {
+					if (COP_Y < 9 && map[cops[i][1] + 1][cops[i][0]] == EMPTY) {
+						map[cops[i][1]++][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == LEFT) {
+					if (COP_X > 0 && map[cops[i][1]][cops[i][0] - 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]--] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == RIGHT) {
+					if (COP_X < 4 && map[cops[i][1]][cops[i][0] + 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]++] = EMPTY;
+						temp = !temp;
+					}
+				}
+			}
+			else if (COP_Q == 4) {
+				if (dir[random] == UP) {
+					if (COP_Y > 5 && map[cops[i][1] - 1][cops[i][0]] == EMPTY) {
+						map[cops[i][1]--][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == DOWN) {
+					if (COP_Y < 9 && map[cops[i][1] + 1][cops[i][0]] == EMPTY) {
+						map[cops[i][1]++][cops[i][0]] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == LEFT) {
+					if (COP_X > 5 && map[cops[i][1]][cops[i][0] - 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]--] = EMPTY;
+						temp = !temp;
+					}
+				}
+				else if (dir[random] == RIGHT) {
+					if (COP_X < 9 && map[cops[i][1]][cops[i][0] + 1] == EMPTY) {
+						map[cops[i][1]][cops[i][0]++] = EMPTY;
+						temp = !temp;
+					}
+				}
+			}
+
+			if (temp == false) {
+				map[cops[i][1]][cops[i][0]] = O;
+			}
+			
+		}
+	}
+	
+}
+
+/*
+* ê²½ì°°ì´ í”Œë ˆì´ì–´ë¥¼ ë°œê²¬(ê°ì§€). ê°ì§€ê±°ë¦¬ëŠ” ë°˜ê²½ 3ì¹¸.
+* parameter : void
+* return : int(ë°œê²¬í•˜ë©´ 1(true), ì•„ë‹ˆë©´ 0(false))
+*/
+int detectPlayer(void){
+	// ê²½ì°°ì´ 0ëª…ì´ë©´ ê°ì§€í•  í•„ìš”ê°€ ì—†ìŒ
+	if (policeNum == 0) return false;
+
+	int i;
+	for (i = 0; i < policeNum; i++) {
+		int start = NULL, end = NULL, detect = false;
+		if (playerX == cops[i][0])
+		{
+			if (playerY > cops[i][1]) {
+				start = cops[i][1];
+				end = playerY;
+			}
+			else {
+				start = playerY;
+				end = cops[i][1];
+			}
+
+			// ì„œë¡œì˜ ê±°ë¦¬ê°€ 3ì¹¸ ë°–ì´ë©´
+			if (end - start > 3)
+				// ê°ì§€ ë¶ˆê°€ëŠ¥
+				return false;
+
+			// ì„œë¡œì˜ ê±°ë¦¬ê°€ ë°˜ê²½ 3ì¹¸ì´ë¼ë©´
+			else {
+				for (int i = start; i <= end; i++) {
+					// ë²½ìœ¼ë¡œ í•˜ë‚˜ë¼ë„ ë§‰í˜€ìˆìœ¼ë©´ returnìœ¼ë¡œ ì¸í•´ í•¨ìˆ˜ë¥¼ ë‚˜ê°€ê²Œ ë¨.
+					if (map[i][playerX] == 1) return false;
+
+
+				}
+				// ë°˜ëŒ€ë¡œ ë²½ì´ ì—†ìœ¼ë©´ ê°ì§€ ì„±ê³µ
+				detect = true;
+
+			}
+		}
+		else if (playerY == cops[i][1])
+		{
+			if (playerX > cops[i][0]) {
+				start = cops[i][0];
+				end = playerX;
+			}
+			else {
+				start = playerX;
+				end = cops[i][0];
+			}
+
+			// ì„œë¡œì˜ ê±°ë¦¬ê°€ 4ì¹¸ ë°–ì´ë©´
+			if (end - start > 3)
+				// ê°ì§€ ë¶ˆê°€ëŠ¥
+				return false;
+
+			// ì„œë¡œì˜ ê±°ë¦¬ê°€ ë°˜ê²½ 4ì¹¸ì´ë¼ë©´
+			else {
+				for (int i = start; i <= end; i++) {
+					// ë²½ìœ¼ë¡œ í•˜ë‚˜ë¼ë„ ë§‰í˜€ìˆìœ¼ë©´ returnìœ¼ë¡œ ì¸í•´ í•¨ìˆ˜ë¥¼ ë‚˜ê°€ê²Œ ë¨.
+					if (map[playerY][i] == 1) return false;
+
+
+				}
+				// ë°˜ëŒ€ë¡œ ë²½ì´ ì—†ìœ¼ë©´ ê°ì§€ ì„±ê³µ
+				detect = true;
+
+			}
+		}
+
+		if (start == NULL && end == NULL) continue;
+		
+
+		if (detect) {
+			// ì„ì‹œë¡œ í˜„ì¬ curQuadë¥¼ ì €ì¥
+			tempQuad = curQuad;
+			detectorQuad = cops[i][2];
+			return true;
+		}
+	}
+	return 0;
+}
+
+/*
+* ê²½ì°° ìŠ¤í° í•¨ìˆ˜
+* parameter : void
+* return : void
+*/
+void spawnPolice() {
+	static int firstSpawnQuad = NULL;
+	static int temp = NULL;
+	int x, y, isSpawned = false;
+	
+	// m_t ì´ˆê³¼ ì§ì „ ìˆì—ˆë˜ ì‚¬ë¶„ë©´ ì €ì¥
+	if (current_m_t == 0) temp = curQuad;
+	
+	//m_t ì´ˆê³¼í•œ ìƒíƒœ && ê²½ì°° 0ëª…
+	if (current_m_t < 0 && policeNum == 0) {
+
+		// ë„˜ì–´ê°„ ë¶„ë©´ì´ ë‚˜ë¨¸ì§€ ë¶„ë©´ì´ì—¬ì•¼ í•¨.
+		if (curQuad == pubQuad || curQuad == homeQuad) return;
+		while (true) {
+
+			// ì¢Œí‘œ ë²”ìœ„ ì§€ì •.
+			if (curQuad == 1)
+			{
+				x = rand() % 5;
+				y = rand() % 5;
+			}
+			if (curQuad == 2)
+			{
+				x = rand() % 5 + 5;
+				y = rand() % 5;
+			}
+			if (curQuad == 3)
+			{
+				x = rand() % 5;
+				y = rand() % 5 + 5;
+			}
+			if (curQuad == 4)
+			{
+				x = rand() % 5 + 5;
+				y = rand() % 5 + 5;
+			}
+			
+			// ê¸¸ ìœ„ì—ì„œë§Œ ìŠ¤í°
+			if (map[y][x] == EMPTY) {
+
+				// ê²½ì°° ê°ì²´ ë°ì´í„° ìƒì„±
+				cops[0][0] = x;
+				cops[0][1] = y;
+				cops[0][2] = curQuad;
+					
+				policeNum++;
+
+				// ë§µì— ê²½ì°° ì¶”ê°€
+				map[y][x] = O;
+				pauseSpawning = true;
+				firstSpawnQuad = curQuad;
+				// í•¨ìˆ˜ ì¢…ë£Œ
+				return;
+			}
+		}
+	}
+	if (current_m_t < 0 && pauseSpawning == false && policeNum == 1 && temp == curQuad) {
+		for (int i = 1; i <= 4; i++) {
+			if (i == pubQuad || i == homeQuad || i == firstSpawnQuad) continue;
+			lastQuad = i;
+		}
+		while (true) {
+
+			// ì¢Œí‘œ ë²”ìœ„ ì§€ì •.
+			if (lastQuad == 1)
+			{
+				x = rand() % 5;
+				y = rand() % 5;
+			}
+			if (lastQuad == 2)
+			{
+				x = rand() % 5 + 5;
+				y = rand() % 5;
+			}
+			if (lastQuad == 3)
+			{
+				x = rand() % 5;
+				y = rand() % 5 + 5;
+			}
+			if (lastQuad == 4)
+			{
+				x = rand() % 5 + 5;
+				y = rand() % 5 + 5;
+			}
+
+			// ê¸¸ ìœ„ì—ì„œë§Œ ìŠ¤í°
+			if (map[y][x] == EMPTY) {
+
+				// ê²½ì°° ê°ì²´ ë°ì´í„° ìƒì„±
+				cops[1][0] = x;
+				cops[1][1] = y;
+				cops[1][2] = lastQuad;
+
+				policeNum++;
+				pauseSpawning = true;
+
+				// ë§µì— ê²½ì°° ì¶”ê°€
+				map[y][x] = O;
+				// í•¨ìˆ˜ ì¢…ë£Œ
+				return;
+			}
+		}
+	}
+}
+
+/*
+* ê²Œì„ì˜ ëª¨ë“  ì§„í–‰ì„ ë‹´ë‹¹
+* parameter : void
+* return : void
+*/
+void gameControl() {
+
+	// íŒ¨íŠ¸ë¡¤í•˜ë‹¤ê°€
+	if (isAuto == true)
+		// í”Œë ˆì´ì–´ë¥¼ ê°ì§€í•¨
+		if (detectPlayer())
+			// ìˆ˜ë™ ëª¨ë“œë¡œ ì´í–‰
+			isAuto = false;
+
+
+	if (isAuto == true) {
+
+		autoMovement(); //stopped
+		copPatrol();
+		if(policeNum <= 1) spawnPolice();
+
+		Sleep(moveInterval);
+	}
+	else {
+		manualMovement();
+	}
+	visitedQuad();
+}
 
 int main() {
-	// ·£´ı ½Ãµå »ı¼º
+	// ëœë¤ ì‹œë“œ ìƒì„±
 	srand(time(NULL));
 
-	// °¡·Î 60Ä­ ¼¼·Î 30Ä­À¸·Î ÄÜ¼Ö ¸®»çÀÌÁî
+	// ê°€ë¡œ 60ì¹¸ ì„¸ë¡œ 30ì¹¸ìœ¼ë¡œ ì½˜ì†” ë¦¬ì‚¬ì´ì¦ˆ
 	system("mode con cols=60 lines=30"); 
 	memsetBuffer();
 	CursorInvisible();
 	setSpawnPos();
 	setSpawnDrunk();
-	
-	cops[0][0] = 5;
-	cops[0][1] = 0;
+	setOption();
 
-	policeNum = 1;
-
+	//í˜„ì¬ë¶„ë©´ ì´ì „ë¶„ë©´ì„ ìˆ ì§‘ë¶„ë©´ìœ¼ë¡œ
 	curQuad = prevQuad = pubQuad;
+	
+	buffer_print(map);
+	printf("\n\nì•„ë¬´ í‚¤ë‚˜ ëˆŒëŸ¬ ì‹œì‘...");
+	_getch();
 	while (1) {
 		
 		buffer_print(map);
-		visitedQuad();
-		autoMovement();
-		//manualMovement();
+		gameControl();
 
-		gotoxy(0,11);
+		// ëª¨ë‹ˆí„°ë§?
+		// í…ìŠ¤íŠ¸ ì»¬ëŸ¬ë¥¼ ë°ì€ í°ìƒ‰ìœ¼ë¡œ
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
-		printf("curQuad = %d prevQuad = %d", curQuad, prevQuad);
-		//printf("m_t : %02d/%d\nr_t : %02d/%d\nInterval : %d (ms)", current_m_t, m_t, current_r_t, r_t, moveInterval);
+	
+		gotoxy(0, 11);
+		printf("í˜„ì¬  ìœ„ì¹˜ : %-1d  ì‚¬ë¶„ë©´\nì´ì „  ìœ„ì¹˜ : %-1d  ì‚¬ë¶„ë©´", curQuad, prevQuad);
+		gotoxy(0, 14);
+		printf("Player X : %d\t Player Y : %d", playerX, playerY);
+		gotoxy(0, 15);
+		printf("m_t : %d / %d\nr_t : %d / %d\nInterval : %d (ms)", current_m_t, m_t, current_r_t, r_t, moveInterval);
+		gotoxy(0, 18);
+		printf("MovementType : %s\n", isAuto ? "auto" : "manual");
+		printf("Home Quad: %d  |  Pub Quad : %d\n", homeQuad, pubQuad);
+		printf("Police Num: %d\n1st: {%d %d %d} | 2nd: {%d %d %d}", policeNum, cops[0][0], cops[0][1], cops[0][2], cops[1][0], cops[1][1], cops[1][2]);
 
-		Sleep(10);
+
 	}
 
 }
